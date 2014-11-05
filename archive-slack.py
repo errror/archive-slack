@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# $Id: archive-slack.py,v 1.1 2014/09/30 13:43:54 errror Exp $
+# $Id: archive-slack.py,v 1.2 2014/11/05 14:58:28 errror Exp $
 
 # apt-get install python-anyjson
 import httplib, anyjson, pprint, sys, os, getopt
@@ -57,7 +57,7 @@ def writeJson(name, data, subdir = "."):
 
 # reads a json input file 'name.json' returning deserialized data
 def readJson(name, subdir = "."):
-    if os.path.isfile(name+'.json'):
+    if os.path.isfile(subdir+os.sep+name+'.json'):
         f = open(subdir+os.sep+name+'.json', 'r')
         data = anyjson.deserialize(f.read())
         f.close()
@@ -164,14 +164,17 @@ def fetchFiles(files, oldfiles):
             out.close()
 
 def usage(exitcode):
+    print ""
     print "Usage: archive-slack.py [options] <auth-token>"
+    print ""
     print "Options:"
     print "    -h --help      : print this help"
     print "    -q --quiet     : no output except errors"
     print "    -v --verbose   : verbose output"
     print "    -p --no-public : skip download of public channels, private groups and files"
     print "    -P --private   : include direct messages and private files"
-    print
+    print ""
+    print "Use https://api.slack.com/#auth to generate your auth-token."
     exit(exitcode)
 
 def verboseprint(text):
@@ -197,7 +200,9 @@ opts, args = getopt.gnu_getopt(sys.argv,
                                    'no-public',
                                    'private',
                                    ])
-# and a authentication token, given via cmdline arg
+# and a authentication token, given via cmdline arg, use https://api.slack.com/#auth to generate your own
+if len(args) != 2:
+    usage(1)
 token = args[1]
 
 quiet = False
