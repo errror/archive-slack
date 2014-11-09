@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# $Id: archive-slack.py,v 1.2 2014/11/05 14:58:28 errror Exp $
+# $Id: archive-slack.py,v 1.3 2014/11/09 14:43:42 errror Exp $
 
 # apt-get install python-anyjson
 import httplib, anyjson, pprint, sys, os, getopt
@@ -233,9 +233,13 @@ if not nopublic or private:
 if not nopublic:
     writeJson('users', users)
     infoprint("Channels")
-    fetchChannels(getChannels(), 'channels', 'channels')
+    channels = getChannels()
+    writeJson("channels", channels)
+    fetchChannels(channels, 'channels', 'channels')
     infoprint("Groups")
-    fetchChannels(getGroups(), 'groups', 'groups')
+    groups = getGroups()
+    writeJson("groups", groups)
+    fetchChannels(groups, 'groups', 'groups')
     infoprint("Files")
     files = getFiles()
     oldfiles = readJson('files')
