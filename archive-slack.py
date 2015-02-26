@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# $Id: archive-slack.py,v 1.3 2014/11/09 14:43:42 errror Exp $
+# $Id: archive-slack.py,v 1.4 2015/02/26 12:38:22 errror Exp $
 
 # apt-get install python-anyjson
 import httplib, anyjson, pprint, sys, os, getopt
@@ -143,6 +143,9 @@ def fetchFiles(files, oldfiles):
         if f['filetype'] == 'gsheet':
             verboseprint("  "+f['name']+" (GSheet)")
             continue
+        if f['filetype'] == 'gpres':
+            verboseprint("  "+f['name']+" (GPresentation)")
+            continue
         if not os.path.isdir('files'):
             os.mkdir('files')
         outfilename = 'files'+os.sep+f['id']+'.'+f['filetype'];
@@ -154,6 +157,8 @@ def fetchFiles(files, oldfiles):
         else:
             infoprint("  "+f['name'])
         hcon = httplib.HTTPSConnection('slack-files.com')
+        if not f.has_key('url_download'):
+            pprint.pprint(f)
         hcon.request('GET', f['url_download'][23:])
         result = hcon.getresponse()
         if result.status != 200:
