@@ -160,6 +160,11 @@ def messageToWiki(m, edited = False):
                     return None, None
                 user = m['comment']['user']
                 text += m['text']
+            elif m['subtype'] == 'file_mention':
+                if m['text'] == 'A deleted file was mentioned on':
+                    return None, None
+                user = m['user']
+                text += m['text']
 
             else:
                 print "unknown subtype '"+m['subtype']+"':"
@@ -306,6 +311,13 @@ def getWikipage(wikiurl, pagename, username, password):
         raise ex
     return content
 
+def fileToWiki(f):
+    content = ""
+    channels = f['channels']
+    groups = f['groups']
+    content += "= " + f['title'] + " =\n"
+    content += "\n"
+    return content
 
 opts, args = getopt.gnu_getopt(sys.argv,
                                'hqv',
@@ -316,6 +328,7 @@ opts, args = getopt.gnu_getopt(sys.argv,
                                    'users-file=',
                                    'channels-file=',
                                    'groups-file=',
+                                   'files-file=',
                                    'wiki-user=',
                                    'wiki-pass=',
                                    'wiki-members-page=',
@@ -329,6 +342,7 @@ quiet = False
 usersfile = None
 channelsfile = None
 groupsfile = None
+filesfile = None
 wikiuser = None
 wikipass = None
 wikimemberspage = None
@@ -346,6 +360,8 @@ for o, v in opts:
         channelsfile = v
     elif o == '--groups-file':
         groupsfile = v
+    elif o == '--files-file':
+        filesfile = v
     elif o == '--wiki-user':
         wikiuser = v
     elif o == '--wiki-pass':
@@ -376,6 +392,13 @@ if wikimemberspage:
             user = match.group(1)
             lcuser = user.lower()
             wikiusers[lcuser] = user
+
+if filesfile != None:
+    print "Files not supported yet"
+    sys.exit(1)
+    files = readJson(filesfile)
+    for f in files:
+        print fileToWiki(f)
 
 for c in renderchannels:
     channel = readJson(c)
