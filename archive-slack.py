@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# $Id: archive-slack.py,v 1.4 2015/02/26 12:38:22 errror Exp $
+# $Id: archive-slack.py,v 1.5 2015/03/07 11:22:07 errror Exp $
 
 # apt-get install python-anyjson
 import httplib, anyjson, pprint, sys, os, getopt
@@ -10,11 +10,18 @@ def slackApi(function, args = {}):
     uri = '/api/'+function+'?token='+token
     for a in args:
         uri += '&'+a+'='+args[a]
-    hcon.request('GET', uri)
-    result = hcon.getresponse()
-    if result.status != 200:
-        print 'Error '+function+'(): '+result.status+' ('+result.reason+')'
-        exit(1)
+    result = None
+    try:
+        hcon.request('GET', uri)
+        result = hcon.getresponse()
+    except (httplib.BadStatusLine), ex:
+        # this happens sometimes, we retry once
+        try:
+            hcon.request('GET', uri)
+            result = hcon.getresponse()
+        except (httplib.BadStatusLine), ex:
+            print 'Error fetching "%s" from Slack: %s' % (url, str(ex))
+            raise ex
     return anyjson.deserialize(result.read())
 
 # loads the list of all users with their attributes
