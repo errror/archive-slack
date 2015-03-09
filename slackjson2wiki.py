@@ -139,7 +139,14 @@ def messageToWiki(m, edited = False):
             elif m['subtype'] == 'bot_message':
                 user = m['username']
                 if user == 'IFTTT':
-                    text = m['attachments'][0]['text']
+                    if m['attachments'][0].has_key('text'):
+                        text = m['attachments'][0]['text']
+                    elif m['attachments'][0].has_key('pretext'):
+                        text = m['attachments'][0]['pretext']
+                    else:
+                        print "Could not handle new type bot message:"
+                        pprint.pprint(m)
+                        return None, None
                 else:
                     text = m['text']
                 # pprint.pformat(m)
@@ -259,7 +266,7 @@ def writeWikipage(content, wikiurl, pagename, username, password):
         else:
             oldcontent = oldcontent+"\n"
         if oldcontent != content:
-            debug_print("Writing "+wikiurl+"/"+pagename+" with "+username+":"+password)
+            debug_print("Writing "+wikiurl+"/"+pagename)
             try:
                 mc.putPage(pagename, content)
                 results = []
@@ -274,8 +281,8 @@ def writeWikipage(content, wikiurl, pagename, username, password):
                 if not 'No such page was found' in str(ex):
                     print "Unexpected error while putpage(%s), raising again:" % pagename
                     print str(ex)
-        else:
-            debug_print("Skipping "+wikiurl+"/"+pagename+" with unchanged content")
+#        else:
+#            debug_print("Skipping "+wikiurl+"/"+pagename+" with unchanged content")
     except (xmlrpclib.Fault, xmlrpclib.ProtocolError), ex:
         print "pagename=%s" % pagename
         print 'XMLRPC: ' + str(ex)
