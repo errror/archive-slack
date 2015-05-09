@@ -31,7 +31,9 @@ def userid2name(user):
         else:
             return users[user]['real_name']
     else:
-        if user != 'Ingress - Google+ Posts' and user != 'NIA Ops - Google+ Posts' and user != 'IFTTT':
+        if user.startswith('bot_as:'):
+            user = '%s (via Bot)' % user[7:]
+        elif not user in [ 'Ingress - Google+ Posts', 'NIA Ops - Google+ Posts', 'IFTTT', 'bot' ]:
             print "Returning %s as not found" % user
         return user
 
@@ -41,7 +43,7 @@ def userid2username(user):
     elif users.has_key(user):
         return users[user]['name']
     else:
-        if user != 'Ingress - Google+ Posts' and user != 'NIA Ops - Google+ Posts' and user != 'IFTTT':
+        if not user in [ 'Ingress - Google+ Posts', 'NIA Ops - Google+ Posts', 'IFTTT', 'bot' ]:
             print "Returning %s as not found" % user
         return user
 
@@ -151,6 +153,8 @@ def messageToWiki(m, edited = False):
                         return None, None
                 else:
                     text = m['text']
+                if not user in  [ 'Ingress - Google+ Posts', 'NIA Ops - Google+ Posts', 'IFTTT', 'bot' ]:
+                    user = 'bot_as:%s' % user
                 # pprint.pformat(m)
             elif m['subtype'] == 'me_message':
                 user = m['user']
@@ -185,6 +189,9 @@ def messageToWiki(m, edited = False):
     else:
         user = m['user']
         text = m['text']
+
+    if user == 'Patrick C.':
+        pprint.pprint(m)
 
     if user == "":
         print "no user found for message:"
