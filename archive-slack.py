@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# $Id: archive-slack.py,v 1.5 2015/03/07 11:22:07 errror Exp $
+# $Id: archive-slack.py,v 1.6 2015/05/11 08:15:55 errror Exp $
 
 # apt-get install python-anyjson
 import httplib, anyjson, pprint, sys, os, getopt
@@ -88,7 +88,13 @@ def getHistory(id, type, oldmessages):
             'latest': str(latest),
             'oldest': str(last_ts),
             })
-        has_more = json['has_more']
+        try:
+            has_more = json['has_more']
+        except KeyError as e:
+            print "Got KeyError while checking for has_more: %s" % str(e)
+            print "Got this from slack:"
+            pprint.pprint(json)
+            has_more = False
         for i in json['messages']:
             oldmessages.append(i)
             latest = i['ts']
