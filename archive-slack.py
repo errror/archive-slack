@@ -227,6 +227,9 @@ opts, args = getopt.gnu_getopt(sys.argv,
 if len(args) != 2:
     usage(1)
 token = args[1]
+
+quiet = False
+verbose = False
 nopublic = False
 private = False
 
