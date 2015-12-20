@@ -2,7 +2,7 @@
 # apt-get install python-anyjson
 
 
-import anyjson, pprint, sys, os, getopt, json, time
+import anyjson, pprint, sys, os, getopt, json, time, shutil
 
 
 
@@ -20,7 +20,7 @@ def readJson(name, subdir="."):
 # writes a json output file 'name.json' containing json serialization of 'data'
 def writeHTML(name, data, subdir="html"):
     f = open(subdir + os.sep + name + '.html', 'w')
-    f.write(data)
+    f.write(data.encode('utf-8'))
     f.close()
 
 
@@ -32,7 +32,14 @@ def itemName(item, users):
 
 
 # format a single message according to the rules
+# FIXME: should be improved for different message types
 def formatMessage(message, users):
+    #Quick and dirty workarount for no 'text' key.
+    if not 'text' in message:
+        print("Unexpected message, no 'text' key:")
+        print(json.dumps(data, sort_keys=True, indent=2).encode('utf-8'))
+        return ""
+
     res = '<div class="message"><div class="timestamp">' + \
           time.strftime('%H:%M:%S', time.localtime(float(message['ts']))) + \
           '</div><div class="message_content">'
@@ -194,6 +201,8 @@ if verbose:
 if not os.path.isdir("html"):
     infoprint("Creating 'html' directory")
     os.mkdir("html")
+#copying the style.css file:
+shutil.copy2(sys.path[0]+os.sep+'style.css', 'html')
 channels = readJson("channels")
 groups = readJson("groups")
 dms = readJson("dms")
