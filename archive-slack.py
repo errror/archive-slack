@@ -3,7 +3,7 @@
 # $Id: archive-slack.py,v 1.6 2015/05/11 08:15:55 errror Exp $
 
 # apt-get install python-anyjson
-import httplib, anyjson, pprint, sys, os, getopt
+import httplib, anyjson, pprint, sys, os, getopt, json
 
 # generic wrapper for slack api calls, error handling only basic
 def slackApi(function, args = {}):
@@ -59,7 +59,8 @@ def getDMs():
 # writes a json output file 'name.json' containing json serialization of 'data'
 def writeJson(name, data, subdir = "."):
     f = open(subdir+os.sep+name+'.json', 'w')
-    f.write(anyjson.serialize(data))
+    f.write(json.dumps(data, sort_keys=True, indent=2))
+#    f.write(anyjson.serialize(data))
     f.close()
 
 # reads a json input file 'name.json' returning deserialized data
@@ -171,15 +172,19 @@ def fetchFiles(files, oldfiles):
             infoprint("  "+f['name'])
         hcon = httplib.HTTPSConnection('slack-files.com')
         if not f.has_key('url_download'):
+            print("No 'url_download' in file: "+f['name']+"; skipping.");
             pprint.pprint(f)
-        hcon.request('GET', f['url_download'][23:])
-        result = hcon.getresponse()
-        if result.status != 200:
-            print 'Error fetching file '+f['id']+' from '+f['url_download']
         else:
-            out = open(outfilename, 'w')
-            out.write(result.read())
-            out.close()
+            hcon.request('GET', f['url_download'][23:])
+            result = hcon.getresponse()
+            if result.status != 200:
+                print 'Error fetching file '+f['id']+' from '+f['url_download']
+            else:
+                out = open(outfilename, 'w')
+                out.write(result.read())
+                out.close()
+        oldfiledict[f['id']]=f
+    return oldfiledict.values()
 
 def usage(exitcode):
     print ""
@@ -265,4 +270,6 @@ if not nopublic:
     writeJson('files', files)
 if private:
     infoprint("DMs")
-    fetchChannels(getDMs(), 'im', 'dms')
+    dms = getDMs()
+    writeJson("dms", dms)
+    fetchChannels(dms, 'im', 'dms')

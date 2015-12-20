@@ -1,0 +1,50 @@
+body {
+    color: #555459;
+    font-family: "Helvetica Neue",Helvetica,"Segoe UI",Tahoma,Arial,sans-serif;
+    font-size: 16px;
+    line-height: 1rem;
+}
+
+.message_user  {
+    display: inline;
+}
+
+
+.message_content {
+margin-left: 80px;
+}
+
+.timestamp {
+    width: 80px;
+    /*margin-right: 2em;*/
+    text-align: left;
+    position: absolute;
+
+}
+
+.message_user {
+font-weight: 900;
+}
+.message {
+padding-bottom: 2px;
+padding-top: 1px;
+
+}
+
+.date_separator {
+    background: #fff none repeat scroll 0 0;
+    clear: both;
+    color: #2c2d30;
+    cursor: default;
+    font-family: Slack-Lato,appleLogo,sans-serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    line-height: 1rem;
+    margin: 1.2rem 0;
+    padding: 0;
+    position: relative;
+    text-align: center;
+    border-top: 1px solid black;
+    border-bottom: 1px solid black;
+    width: 90%;
+}
