@@ -37,7 +37,7 @@ def formatMessage(message, users):
     #Quick and dirty workarount for no 'text' key.
     if not 'text' in message:
         print("Unexpected message, no 'text' key:")
-        print(json.dumps(data, sort_keys=True, indent=2).encode('utf-8'))
+        print(json.dumps(message, sort_keys=True, indent=2).encode('utf-8'))
         return ""
 
     res = '<div class="message"><div class="timestamp">' + \
