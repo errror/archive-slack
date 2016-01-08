@@ -133,7 +133,11 @@ def getFiles():
             'count': '1000',
             'page': str(page),
             })
-        pages = int(json['paging']['pages'])
+        try:
+            pages = int(json['paging']['pages'])
+        except KeyError as e:
+            pprint.pprint(json)
+            raise e
         page += 1
         for i in json['files']:
             files.append(i)
@@ -169,13 +173,25 @@ def fetchFiles(files, oldfiles):
             infoprint("  "+f['name']+" (modified, redownloading)")
         else:
             infoprint("  "+f['name'])
-        hcon = httplib.HTTPSConnection('slack-files.com')
+        download_url = ''
         if not f.has_key('url_download'):
-            pprint.pprint(f)
-        hcon.request('GET', f['url_download'][23:])
+            if f.has_key('url_private_download'):
+                download_url = f['url_private_download']
+            else:
+                pprint.pprint(f)
+                print 'Error: Could not find suitable url to download this file'
+                return
+        else:
+            download_url = f['url_download']
+        print "Downloading "+download_url
+        hcon = httplib.HTTPSConnection('files.slack.com')
+        hcon.connect()
+        hcon.request('GET', download_url[23:], headers = {
+            'Authorization': 'Bearer xoxp-2354473925-2354473927-2607324405-831e73'
+        })
         result = hcon.getresponse()
         if result.status != 200:
-            print 'Error fetching file '+f['id']+' from '+f['url_download']
+            print 'Error fetching file '+f['id']+' from '+download_url
         else:
             out = open(outfilename, 'w')
             out.write(result.read())
