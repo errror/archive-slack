@@ -183,7 +183,6 @@ def fetchFiles(files, oldfiles):
                 return
         else:
             download_url = f['url_download']
-        print "Downloading "+download_url
         hcon = httplib.HTTPSConnection('files.slack.com')
         hcon.connect()
         hcon.request('GET', download_url[23:], headers = {
