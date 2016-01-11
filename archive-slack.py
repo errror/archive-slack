@@ -186,7 +186,7 @@ def fetchFiles(files, oldfiles):
         hcon = httplib.HTTPSConnection('files.slack.com')
         hcon.connect()
         hcon.request('GET', download_url[23:], headers = {
-            'Authorization': 'Bearer xoxp-2354473925-2354473927-2607324405-831e73'
+            'Authorization': 'Bearer %s' % token
         })
         result = hcon.getresponse()
         if result.status != 200:
