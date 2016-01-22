@@ -156,9 +156,9 @@ def messageToWiki(m, edited = False):
                 if not user in  [ 'Ingress - Google+ Posts', 'NIA Ops - Google+ Posts', 'IFTTT', 'bot' ]:
                     user = 'bot_as:%s' % user
                 # pprint.pformat(m)
-            elif m['subtype'] == 'me_message':
+            elif m['subtype'] == 'me_message' or m['subtype'] == 'reminder_add':
                 user = m['user']
-                text = m['user']+" "+m['text']
+                text = '<@'+m['user']+"> "+m['text']
                 fmt_before = fmt_after = "''"
 
             elif m['subtype'] == 'file_share':
