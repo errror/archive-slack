@@ -3,7 +3,7 @@
 # $Id: archive-slack.py,v 1.6 2015/05/11 08:15:55 errror Exp $
 
 # apt-get install python-anyjson
-import httplib, anyjson, pprint, sys, os, getopt
+import requests, httplib, anyjson, pprint, sys, os, getopt
 
 # generic wrapper for slack api calls, error handling only basic
 def slackApi(function, args = {}):
@@ -183,17 +183,13 @@ def fetchFiles(files, oldfiles):
                 return
         else:
             download_url = f['url_download']
-        hcon = httplib.HTTPSConnection('files.slack.com')
-        hcon.connect()
-        hcon.request('GET', download_url[23:], headers = {
-            'Authorization': 'Bearer %s' % token
-        })
-        result = hcon.getresponse()
-        if result.status != 200:
+        req = requests.get(download_url, headers={'Authorization': 'Bearer %s' % token})
+        if req.status_code != 200:
             print 'Error fetching file '+f['id']+' from '+download_url
+            print 'status_code: %s' % req.status_code
         else:
             out = open(outfilename, 'w')
-            out.write(result.read())
+            out.write(req.content)
             out.close()
 
 def usage(exitcode):
