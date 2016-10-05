@@ -174,15 +174,16 @@ def fetchFiles(files, oldfiles):
         else:
             infoprint("  "+f['name'])
         download_url = ''
-        if not f.has_key('url_download'):
-            if f.has_key('url_private_download'):
-                download_url = f['url_private_download']
-            else:
-                pprint.pprint(f)
-                print 'Error: Could not find suitable url to download this file'
-                return
-        else:
+        if f.has_key('url_download'):
             download_url = f['url_download']
+        elif f.has_key('url_private_download'):
+            download_url = f['url_private_download']
+        elif f.has_key('permalink'):
+            download_url = f['permalink']
+        else:
+            pprint.pprint(f)
+            print 'Error: Could not find suitable url to download this file'
+            return
         req = requests.get(download_url, headers={'Authorization': 'Bearer %s' % token})
         if req.status_code != 200:
             print 'Error fetching file '+f['id']+' from '+download_url
