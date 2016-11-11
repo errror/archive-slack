@@ -34,7 +34,7 @@ def userid2name(user):
         if user.startswith('bot_as:'):
             user = '%s (via Bot)' % user[7:]
         elif not user in [ 'Ingress - Google+ Posts', 'NIA Ops - Google+ Posts', 'IFTTT', 'bot' ]:
-            print "Returning %s as not found" % user
+            print "Returning %s as not found name" % user
         return user
 
 def userid2username(user):
@@ -44,7 +44,7 @@ def userid2username(user):
         return users[user]['name']
     else:
         if not user in [ 'Ingress - Google+ Posts', 'NIA Ops - Google+ Posts', 'IFTTT', 'bot' ]:
-            print "Returning %s as not found" % user
+            print "Returning %s as not found username" % user
         return user
 
 def channelid2name(channel):
@@ -155,7 +155,11 @@ def messageToWiki(m, edited = False):
                     text = m['text']
                 if not user in  [ 'Ingress - Google+ Posts', 'NIA Ops - Google+ Posts', 'IFTTT', 'bot' ]:
                     user = 'bot_as:%s' % user
-                # pprint.pformat(m)
+
+            elif m['subtype'] == 'slackbot_response':
+                user = m['user']
+                text = m['text']
+
             elif m['subtype'] in [ 'me_message', 'reminder_add', 'bot_remove', 'bot_add' ]:
                 user = m['user']
                 text = '<@'+m['user']+"> "+m['text']
