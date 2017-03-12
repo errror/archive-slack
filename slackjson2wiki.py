@@ -112,9 +112,7 @@ def messageToWiki(m, edited = False):
     if m.has_key('subtype'):
         msgtype = m['subtype']
         try:
-            if m['subtype'] == 'message_deleted':
-                return None, None
-            elif m['subtype'] == 'pinned_item':
+            if m['subtype'] in [ 'message_deleted', 'pinned_item', 'reply_broadcast' ]:
                 return None, None
             elif m['subtype'] == 'message_changed':
                 return messageToWiki(m['message'], edited = True)
