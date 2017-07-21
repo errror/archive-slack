@@ -1,7 +1,6 @@
 #!/usr/bin/python
 
-# apt-get install python-anyjson
-import httplib, anyjson, pprint, sys, os, getopt, time, datetime, re
+import httplib, json, pprint, sys, os, getopt, time, datetime, re
 
 users = {}
 channels = {}
@@ -10,7 +9,7 @@ channels = {}
 def readJson(name):
     if os.path.isfile(name):
         f = open(name, 'r')
-        data = anyjson.deserialize(f.read())
+        data = json.loads(f.read())
         f.close()
         return data
     else:
@@ -245,19 +244,28 @@ if usersfile != None:
     json = readJson(usersfile)
     for u in json:
         users[json[u]['id']] = json[u]
+        #print "%s\t%s" % (u, json[u]['name'])
 
 if channelsfile != None:
     channels = readJson(channelsfile)
 
 channel = readJson(args[1])
 
+users = {}
 if channel != None:
-    count, header, messages = channelToWiki(channel)
-    print header.encode('utf-8')
-    days = messages.keys()
-    days.sort()
-    for day in days:
-        for m in messages[day]:
-            print m.encode('utf-8')
+    for m in channel['messages']:
+        if 'text' in m and 'ts' in m and 'user' in m:
+            #print "%s %s" % (m['ts'], m['user'])
+            users[m['user']] = m['ts']
+    for u in users.keys():
+        print "%s %s" % (users[u], u)
+
+#    count, header, messages = channelToWiki(channel)
+#    print header.encode('utf-8')
+#    days = messages.keys()
+#    days.sort()
+#    for day in days:
+#        for m in messages[day]:
+#            print m.encode('utf-8')
 else:
     print "Channel not found"

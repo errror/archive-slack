@@ -1,7 +1,6 @@
 #!/usr/bin/python
 
-# apt-get install python-anyjson
-import httplib, anyjson, pprint, sys, os, getopt, time, datetime, re, xmlrpclib
+import httplib, json, pprint, sys, os, getopt, time, datetime, re, xmlrpclib
 
 users = {}
 channels = {}
@@ -16,7 +15,7 @@ def debug_print(s):
 def readJson(name):
     if os.path.isfile(name):
         f = open(name, 'r')
-        data = anyjson.deserialize(f.read())
+        data = json.loads(f.read())
         f.close()
         return data
     else:
@@ -112,7 +111,7 @@ def messageToWiki(m, edited = False):
     if m.has_key('subtype'):
         msgtype = m['subtype']
         try:
-            if m['subtype'] in [ 'message_deleted', 'pinned_item', 'reply_broadcast' ]:
+            if m['subtype'] in [ 'message_deleted', 'pinned_item', 'reply_broadcast', 'thread_broadcast' ]:
                 return None, None
             elif m['subtype'] == 'message_changed':
                 return messageToWiki(m['message'], edited = True)
@@ -390,9 +389,9 @@ for o, v in opts:
         usage(1)
 
 if usersfile != None:
-    json = readJson(usersfile)
-    for u in json:
-        users[json[u]['id']] = json[u]
+    userjson = readJson(usersfile)
+    for u in userjson:
+        users[userjson[u]['id']] = userjson[u]
 
 if channelsfile != None:
     channels = readJson(channelsfile)

@@ -2,8 +2,7 @@
 
 # $Id: archive-slack.py,v 1.6 2015/05/11 08:15:55 errror Exp $
 
-# apt-get install python-anyjson
-import requests, httplib, anyjson, pprint, sys, os, getopt
+import requests, httplib, json, pprint, sys, os, getopt
 
 # generic wrapper for slack api calls, error handling only basic
 def slackApi(function, args = {}):
@@ -22,7 +21,7 @@ def slackApi(function, args = {}):
         except (httplib.BadStatusLine), ex:
             print 'Error fetching "%s" from Slack: %s' % (url, str(ex))
             raise ex
-    return anyjson.deserialize(result.read())
+    return json.loads(result.read())
 
 # loads the list of all users with their attributes
 def getUsers():
@@ -59,14 +58,14 @@ def getDMs():
 # writes a json output file 'name.json' containing json serialization of 'data'
 def writeJson(name, data, subdir = "."):
     f = open(subdir+os.sep+name+'.json', 'w')
-    f.write(anyjson.serialize(data))
+    f.write(json.dumps(data))
     f.close()
 
 # reads a json input file 'name.json' returning deserialized data
 def readJson(name, subdir = "."):
     if os.path.isfile(subdir+os.sep+name+'.json'):
         f = open(subdir+os.sep+name+'.json', 'r')
-        data = anyjson.deserialize(f.read())
+        data = json.loads(f.read())
         f.close()
         return data
     else:
