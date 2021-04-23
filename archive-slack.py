@@ -21,7 +21,12 @@ def slackApi(function, args = {}):
         except (httplib.BadStatusLine), ex:
             print 'Error fetching "%s" from Slack: %s' % (url, str(ex))
             raise ex
-    return json.loads(result.read())
+    raw_data = result.read()
+    try:
+        return json.loads(raw_data)
+    except:
+        print "Error decoding answer from slack API call %s (raw_data=%s)" % (function, raw_data)
+        raise
 
 # loads the list of all users with their attributes
 def getUsers():
@@ -33,25 +38,36 @@ def getUsers():
 
 # loads the list of all channels with their attributes
 def getChannels():
-    json = slackApi('channels.list')
+    json = slackApi('conversations.list', args = {
+        'exclude_archived': 'true',
+        'types': 'public_channel',
+    })
     channels = {}
+    if not 'channels' in json:
+        pprint.pprint(json)
     for i in json['channels']:
         channels[i['id']] = i
     return channels
 
 # loads the list of all groups with their attributes
 def getGroups():
-    json = slackApi('groups.list')
+    json = slackApi('conversations.list', args = {
+        'exclude_archived': 'true',
+        'types': 'private_channel',
+    })
     groups = {}
-    for i in json['groups']:
+    for i in json['channels']:
         groups[i['id']] = i
     return groups
 
 # loads the list of all direct message channels with their attributes
 def getDMs():
-    json = slackApi('im.list')
+    json = slackApi('conversations.list', args = {
+        'exclude_archived': 'true',
+        'types': 'im',
+    })
     ims = {}
-    for i in json['ims']:
+    for i in json['channels']:
         ims[i['id']] = i
     return ims
 
@@ -65,7 +81,12 @@ def writeJson(name, data, subdir = "."):
 def readJson(name, subdir = "."):
     if os.path.isfile(subdir+os.sep+name+'.json'):
         f = open(subdir+os.sep+name+'.json', 'r')
-        data = json.loads(f.read())
+        raw_data = f.read()
+        try:
+            data = json.loads(raw_data)
+        except:
+            print "Error while loading name=%s (raw_data=%s)" % (name, raw_data)
+            sys.exit(1)
         f.close()
         return data
     else:
@@ -81,7 +102,7 @@ def getHistory(id, type, oldmessages):
     if len(oldmessages) > 0:
         last_ts = oldmessages[-1]['ts']
     while has_more:
-        json = slackApi(type+'.history',{
+        json = slackApi('conversations.history',{
             'channel': id,
             'count': '1000',
             'latest': str(latest),
