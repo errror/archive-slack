@@ -121,6 +121,17 @@ def getHistory(id, type, oldmessages):
     oldmessages.sort(key = lambda msg: msg['ts'])
     return oldmessages
 
+# loads the members of channel/group 'id',
+def getChannelMembers(id):
+    json = slackApi('conversations.members',{
+            'channel': id,
+            'limit': '1000',
+            })
+    try:
+        return json['members']
+    except KeyError:
+        return []
+    
 # iterate over all channels/groups given as 'channels' dict,
 # fetches their complete history and writes them to a json file,
 # type must be 'channel' or 'group'
@@ -141,6 +152,7 @@ def fetchChannels(channels, type, subdir):
         if oldchannel != None:
             oldmessages = oldchannel['messages']
         channels[c]['messages'] = getHistory(c, type, oldmessages)
+        channels[c]['members'] = getChannelMembers(c)
         writeJson(c, channels[c], subdir)
 
 # loads the list of all files with all their attributes
