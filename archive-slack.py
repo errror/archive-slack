@@ -1,8 +1,13 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 # $Id: archive-slack.py,v 1.6 2015/05/11 08:15:55 errror Exp $
 
-import requests, httplib, json, pprint, sys, os, getopt
+from __future__ import print_function
+from __future__ import unicode_literals
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+import requests, http.client, json, pprint, sys, os, getopt, io
 
 # generic wrapper for slack api calls, error handling only basic
 def slackApi(function, args = {}):
@@ -13,19 +18,19 @@ def slackApi(function, args = {}):
     try:
         hcon.request('GET', uri)
         result = hcon.getresponse()
-    except (httplib.BadStatusLine), ex:
+    except (http.client.BadStatusLine) as ex:
         # this happens sometimes, we retry once
         try:
             hcon.request('GET', uri)
             result = hcon.getresponse()
-        except (httplib.BadStatusLine), ex:
-            print 'Error fetching "%s" from Slack: %s' % (url, str(ex))
+        except (http.client.BadStatusLine) as ex:
+            print('Error fetching "%s" from Slack: %s' % (url, str(ex)))
             raise ex
     raw_data = result.read()
     try:
         return json.loads(raw_data)
     except:
-        print "Error decoding answer from slack API call %s (raw_data=%s)" % (function, raw_data)
+        print("Error decoding answer from slack API call %s (raw_data=%s)" % (function, raw_data))
         raise
 
 # loads the list of all users with their attributes
@@ -73,19 +78,19 @@ def getDMs():
 
 # writes a json output file 'name.json' containing json serialization of 'data'
 def writeJson(name, data, subdir = "."):
-    f = open(subdir+os.sep+name+'.json', 'w')
+    f = io.open(subdir+os.sep+name+'.json', 'w', encoding='utf-8')
     f.write(json.dumps(data))
     f.close()
 
 # reads a json input file 'name.json' returning deserialized data
 def readJson(name, subdir = "."):
     if os.path.isfile(subdir+os.sep+name+'.json'):
-        f = open(subdir+os.sep+name+'.json', 'r')
+        f = io.open(subdir+os.sep+name+'.json', 'r', encoding='utf-8')
         raw_data = f.read()
         try:
             data = json.loads(raw_data)
         except:
-            print "Error while loading name=%s (raw_data=%s)" % (name, raw_data)
+            print("Error while loading name=%s (raw_data=%s)" % (name, raw_data))
             sys.exit(1)
         f.close()
         return data
@@ -111,8 +116,8 @@ def getHistory(id, type, oldmessages):
         try:
             has_more = json['has_more']
         except KeyError as e:
-            print "Got KeyError while checking for has_more: %s" % str(e)
-            print "Got this from slack:"
+            print("Got KeyError while checking for has_more: %s" % str(e))
+            print("Got this from slack:")
             pprint.pprint(json)
             has_more = False
         for i in json['messages']:
@@ -198,61 +203,61 @@ def fetchFiles(files, oldfiles):
         if not os.path.isdir('files'):
             os.mkdir('files')
         outfilename = 'files'+os.sep+f['id']+'.'+f['filetype'];
-        if os.path.isfile(outfilename) and oldfiledict.has_key(f['id']):
+        if os.path.isfile(outfilename) and f['id'] in oldfiledict:
             verboseprint("  "+f['name']+" (already downloaded)")
             continue
-        if oldfiledict.has_key(f['id']) and f['timestamp'] == oldfiledict[f['id']]['timestamp']:
+        if f['id'] in oldfiledict and f['timestamp'] == oldfiledict[f['id']]['timestamp']:
             infoprint("  "+f['name']+" (modified, redownloading)")
         else:
             infoprint("  "+f['name'])
         download_url = ''
-        if f.has_key('url_download'):
+        if 'url_download' in f:
             download_url = f['url_download']
-        elif f.has_key('url_private_download'):
+        elif 'url_private_download' in f:
             download_url = f['url_private_download']
-        elif f.has_key('permalink'):
+        elif 'permalink' in f:
             download_url = f['permalink']
         else:
             pprint.pprint(f)
-            print 'Error: Could not find suitable url to download this file'
+            print('Error: Could not find suitable url to download this file')
             return
         req = requests.get(download_url, headers={'Authorization': 'Bearer %s' % token})
         if req.status_code != 200:
-            print 'Error fetching file '+f['id']+' from '+download_url
-            print 'status_code: %s' % req.status_code
+            print('Error fetching file '+f['id']+' from '+download_url)
+            print('status_code: %s' % req.status_code)
         else:
-            out = open(outfilename, 'w')
+            out = io.open(outfilename, 'wb')
             out.write(req.content)
             out.close()
 
 def usage(exitcode):
-    print ""
-    print "Usage: archive-slack.py [options] <auth-token>"
-    print ""
-    print "Options:"
-    print "    -h --help      : print this help"
-    print "    -q --quiet     : no output except errors"
-    print "    -v --verbose   : verbose output"
-    print "    -p --no-public : skip download of public channels, private groups and files"
-    print "    -P --private   : include direct messages and private files"
-    print ""
-    print "Use https://api.slack.com/#auth to generate your auth-token."
+    print("")
+    print("Usage: archive-slack.py [options] <auth-token>")
+    print("")
+    print("Options:")
+    print("    -h --help      : print this help")
+    print("    -q --quiet     : no output except errors")
+    print("    -v --verbose   : verbose output")
+    print("    -p --no-public : skip download of public channels, private groups and files")
+    print("    -P --private   : include direct messages and private files")
+    print("")
+    print("Use https://api.slack.com/#auth to generate your auth-token.")
     exit(exitcode)
 
 def verboseprint(text):
     if verbose:
-        print text.encode('ascii', 'ignore')
+        print(text)
 
 def infoprint(text):
     if not quiet:
-        print text.encode('ascii', 'ignore')
+        print(text)
 
 #
 # main
 #
 
 # for all api calls, we need a https connection to slack.com
-hcon = httplib.HTTPSConnection('slack.com')
+hcon = http.client.HTTPSConnection('slack.com')
 opts, args = getopt.gnu_getopt(sys.argv,
                                'hqvpP',
                                [
