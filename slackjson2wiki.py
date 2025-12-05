@@ -1,62 +1,61 @@
 #!/usr/bin/python3
+# pylint: disable=missing-function-docstring,missing-module-docstring,invalid-name
 
-from __future__ import print_function
-from __future__ import unicode_literals
-from future import standard_library
-standard_library.install_aliases()
-from builtins import map
-from builtins import str
-import http.client, json, pprint, sys, os, getopt, time, datetime, re, xmlrpc.client
+import json
+import pprint
+import sys
+import os
+import io
+import datetime
+import re
+import xmlrpc.client
+# pylint: disable=deprecated-module
+import getopt
 
 users = {}
 channels = {}
 wikiusers = {}
-verbose = False
+VERBOSE = False
+SPECIAL_USERS = [ 'Ingress - Google+ Posts', 'NIA Ops - Google+ Posts', 'IFTTT', 'bot' ]
 
 def debug_print(s):
-    if verbose:
+    if VERBOSE:
         print(s)
 
 # reads a json input file 'name.json' returning deserialized data
 def readJson(name):
     if os.path.isfile(name):
-        f = open(name, 'r')
-        data = json.loads(f.read())
-        f.close()
+        with io.open(name, 'r', encoding='utf-8') as f:
+            data = json.loads(f.read())
         return data
-    else:
-        return None
+    return None
 
 def userid2name(user):
-    if user == u'USLACKBOT':
+    if user == 'USLACKBOT':
         return 'Slack Bot'
-    elif user in users:
+    if user in users:
         if users[user]['deleted']:
             return users[user]['name']+" (deleted)"
-        else:
-            return users[user]['real_name']
-    else:
-        if user.startswith('bot_as:'):
-            user = '%s (via Bot)' % user[7:]
-        elif not user in [ 'Ingress - Google+ Posts', 'NIA Ops - Google+ Posts', 'IFTTT', 'bot' ]:
-            print("Returning %s as not found name" % user)
-        return user
+        return users[user]['real_name']
+    if user.startswith('bot_as:'):
+        user = f'{user[7:]} (via Bot)'
+    elif not user in SPECIAL_USERS:
+        print("Returning {user} as not found name")
+    return user
 
 def userid2username(user):
-    if user == u'USLACKBOT':
+    if user == 'USLACKBOT':
         return 'slackbot'
-    elif user in users:
+    if user in users:
         return users[user]['name']
-    else:
-        if not user in [ 'Ingress - Google+ Posts', 'NIA Ops - Google+ Posts', 'IFTTT', 'bot' ]:
-            print("Returning %s as not found username" % user)
-        return user
+    if not user in SPECIAL_USERS:
+        print(f"Returning {user} as not found username")
+    return user
 
 def channelid2name(channel):
     if channel in channels:
         return channels[channel]['name']
-    else:
-        return "unknown:"+channel
+    return "unknown:"+channel
 
 def ts2date(ts):
     return datetime.datetime.fromtimestamp(
@@ -68,30 +67,30 @@ def ts2dateid(ts):
         int(ts[:10])
         ).strftime("%Y-%m")
 
-def matchReference(match):
+def matchReference(refmatch):
     out = ""
     linktext = ""
-    if match.group(5) == '|':
-        linktext = match.group(6)
-    if match.group(2) == '@':
+    if refmatch.group(5) == '|':
+        linktext = refmatch.group(6)
+    if refmatch.group(2) == '@':
         if linktext != "":
             out = linktext
         else:
-            out = "@%s" % userid2username(match.group(3))
-    elif match.group(2) == '#':
+            out = f"@{userid2username(refmatch.group(3))}"
+    elif refmatch.group(2) == '#':
         if linktext != "":
             out = linktext
         else:
-            out = "#%s" % channelid2name(match.group(3))
+            out = f"#{channelid2name(refmatch.group(3))}"
     else:
-        out = "[[%s" % match.group(1)
+        out = f"[[{refmatch.group(1)}"
         if linktext != "":
-            out += "|%s" % linktext
+            out += f"|{linktext}"
         out += "]]"
     return out
 
 def textToWiki(text):
-    reffmt = re.compile('<((.)([^|>]*))((\|)([^>]*)|([^>]*))>')
+    reffmt = re.compile(r'<((.)([^|>]*))((\|)([^>]*)|([^>]*))>')
     text = reffmt.sub(matchReference, text)
     text = text.replace("'", "&apos;")
     text = text.replace("\r\n", "\n")
@@ -99,12 +98,12 @@ def textToWiki(text):
     return text
 
 def messageToWiki(m, edited = False):
+    # pylint: disable=too-many-return-statements,too-many-branches,too-many-statements
     out = ""
     user = ""
     text = ""
     fmt_before = ""
     fmt_after = ""
-    msgtype = "message"
 
     if 'type' not in m or m['type'] != 'message':
         print("Unknown message type:")
@@ -115,30 +114,36 @@ def messageToWiki(m, edited = False):
         return None, None
 
     if 'subtype' in m:
-        msgtype = m['subtype']
         try:
-            if m['subtype'] in [ 'message_deleted', 'pinned_item', 'reply_broadcast', 'thread_broadcast' ]:
+            if m['subtype'] in [
+                    'message_deleted',
+                    'pinned_item',
+                    'reply_broadcast',
+                    'thread_broadcast'
+            ]:
                 return None, None
-            elif m['subtype'] == 'message_changed':
+            if m['subtype'] == 'message_changed':
                 return messageToWiki(m['message'], edited = True)
 
-            elif m['subtype'] == 'channel_join' or \
+            if m['subtype'] == 'channel_join' or \
                     m['subtype'] == 'channel_leave' or \
                     m['subtype'] == 'group_join' or \
                     m['subtype'] == 'group_leave':
                 user = m['user']
-                text = "joined #%s" % channel['name']
+                text = f"joined #{CHANNEL['name']}"
                 fmt_before = fmt_after = "''"
-            elif m['subtype'] == 'channel_topic' or \
-                    m['subtype'] == 'channel_purpose' or \
-                    m['subtype'] == 'group_topic' or \
-                    m['subtype'] == 'group_purpose' or \
-                    m['subtype'] == 'channel_archive' or \
-                    m['subtype'] == 'channel_unarchive' or \
-                    m['subtype'] == 'channel_name' or \
-                    m['subtype'] == 'group_archive' or \
-                    m['subtype'] == 'group_unarchive' or \
-                    m['subtype'] == 'group_name':
+            elif m['subtype'] in [
+                    'channel_topic',
+                    'channel_purpose',
+                    'group_topic',
+                    'group_purpose',
+                    'channel_archive',
+                    'channel_unarchive',
+                    'channel_name',
+                    'group_archive',
+                    'group_unarchive',
+                    'group_name',
+                    ]:
                 user = m['user']
                 text = m['text']
                 fmt_before = fmt_after = "''"
@@ -156,8 +161,8 @@ def messageToWiki(m, edited = False):
                         return None, None
                 else:
                     text = m['text']
-                if not user in  [ 'Ingress - Google+ Posts', 'NIA Ops - Google+ Posts', 'IFTTT', 'bot' ]:
-                    user = 'bot_as:%s' % user
+                if not user in  SPECIAL_USERS:
+                    user = f'bot_as:{user}'
 
             elif m['subtype'] == 'slackbot_response':
                 user = m['user']
@@ -169,14 +174,14 @@ def messageToWiki(m, edited = False):
                 fmt_before = fmt_after = "''"
 
             elif m['subtype'] == 'file_share':
-                if m['text'] == 'A deleted file was shared' or m['upload'] == False:
+                if m['text'] == 'A deleted file was shared' or not m['upload']:
                     return None, None
                 user = m['user']
                 text = m['file']['permalink']
                 if 'initial_comment' in m['file']:
                     text += "\n    "+m['file']['initial_comment']['comment']
             elif m['subtype'] == 'file_comment':
-                if m['text'] == 'A deleted file was commented on' or m['comment'] == None:
+                if m['text'] == 'A deleted file was commented on' or m['comment'] is None:
                     return None, None
                 user = m['comment']['user']
                 text += m['text']
@@ -204,10 +209,7 @@ def messageToWiki(m, edited = False):
         print("no user found for message:")
         pprint.pprint(m)
 
-    out += "'''%s''' ~-%s-~<<BR>>\n" % (
-        userid2name(user),
-        ts2date(m['ts'])
-        )
+    out += f"'''{userid2name(user)}''' ~-{ts2date(m['ts'])}-~<<BR>>\n"
     out += fmt_before
     out += textToWiki(text)
     out += fmt_after
@@ -220,8 +222,7 @@ def messageToWiki(m, edited = False):
 def slackuser2wikiuser(u):
     if u in wikiusers:
         return wikiusers[u]
-    else:
-        return "UnknownWikiUser_%s" % u
+    return f"UnknownWikiUser_{u}"
 
 def channelToWiki(channel):
     header = ""
@@ -237,7 +238,7 @@ def channelToWiki(channel):
         channelmarker = ""
     else:
         channelmarker = "#"
-    header += "= %s%s =\n" % (channelmarker, channel['name'])
+    header += f"= {channelmarker}{channel['name']} =\n"
     if channel['purpose']['value'] != "":
         header += "=== %s ===\n" % channel['purpose']['value'].replace('\r', ' ').replace('\n', ' ')
     if channel['topic']['value'] != "":
@@ -247,18 +248,19 @@ def channelToWiki(channel):
         header += " * archiviert\n"
     header += " * Mitglieder\n"
     for m in members:
-        header += "  * %s\n" % m
+        header += f"  * {m}\n"
     header += "\n"
     messages = {}
     for m in channel['messages']:
         dateid, msg = messageToWiki(m)
-        if dateid != None:
+        if dateid:
             if dateid not in messages:
                 messages[dateid] = []
             messages[dateid].append(msg)
     return header, messages
 
 def writeWikipage(content, wikiurl, pagename, username, password):
+    # pylint: disable=too-many-locals,too-many-branches
     try:
         homewiki = xmlrpc.client.ServerProxy(wikiurl + "?action=xmlrpc2", allow_none=True)
         auth_token = homewiki.getAuthToken(username, password)
@@ -274,7 +276,7 @@ def writeWikipage(content, wikiurl, pagename, username, password):
             if str(ex) == "<Fault 1: 'No such page was found.'>":
                 success = False
             else:
-                print("Unexpected error while getpage(%s), raising again:" % pagename)
+                print(f"Unexpected error while getpage({pagename}), raising again:")
                 str(ex)
                 raise ex
         if not success:
@@ -283,9 +285,14 @@ def writeWikipage(content, wikiurl, pagename, username, password):
             oldcontent = oldcontent+"\n"
         if oldcontent != content:
             debug_print("Writing "+wikiurl+"/"+pagename)
-            if verbose:
-                import difflib
-                for l in difflib.unified_diff(oldcontent.split('\n'), content.split('\n'), fromfile='oldcontent', tofile='newcontent'):
+            if VERBOSE:
+                import difflib # pylint: disable=import-outside-toplevel
+                for l in difflib.unified_diff(
+                        oldcontent.split('\n'),
+                        content.split('\n'),
+                        fromfile='oldcontent',
+                        tofile='newcontent'
+                ):
                     debug_print(l.rstrip())
             try:
                 mc.putPage(pagename, content)
@@ -298,13 +305,13 @@ def writeWikipage(content, wikiurl, pagename, username, password):
                 if not results[1]:
                     print('Failed to write page!')
             except (xmlrpc.client.Fault, xmlrpc.client.ProtocolError) as ex:
-                if not 'No such page was found' in str(ex):
-                    print("Unexpected error while putpage(%s), raising again:" % pagename)
+                if 'No such page was found' not in str(ex):
+                    print(f"Unexpected error while putpage({pagename}), raising again:")
                     print(str(ex))
 #        else:
 #            debug_print("Skipping "+wikiurl+"/"+pagename+" with unchanged content")
     except (xmlrpc.client.Fault, xmlrpc.client.ProtocolError) as ex:
-        print("pagename=%s" % pagename)
+        print(f"pagename={pagename}")
         print('XMLRPC: ' + str(ex))
         raise ex
     return True
@@ -325,7 +332,7 @@ def getWikipage(wikiurl, pagename, username, password):
             if str(ex) == "<Fault 1: 'No such page was found.'>":
                 success = False
             else:
-                print("Unexpected error while getpage(%s), raising again:" % pagename)
+                print(f"Unexpected error while getpage({pagename}), raising again:")
                 str(ex)
                 raise ex
         if not success:
@@ -333,18 +340,22 @@ def getWikipage(wikiurl, pagename, username, password):
         else:
             content = content+"\n"
     except (xmlrpc.client.Fault, xmlrpc.client.ProtocolError) as ex:
-        print("pagename=%s" % pagename)
+        print(f"pagename={pagename}")
         print('XMLRPC: ' + str(ex))
         raise ex
     return content
 
 def fileToWiki(f):
     content = ""
-    channels = f['channels']
-    groups = f['groups']
+    #channels = f['channels']
+    #groups = f['groups']
     content += "= " + f['title'] + " =\n"
     content += "\n"
     return content
+
+def usage(exitcode):
+    print("usage")
+    sys.exit(exitcode)
 
 opts, args = getopt.gnu_getopt(sys.argv,
                                'hqv',
@@ -361,8 +372,8 @@ opts, args = getopt.gnu_getopt(sys.argv,
                                    'wiki-members-page=',
                                    ])
 if len(args) < 3:
-    usage(2)
-wikiurl = args[1]
+    usage(1)
+WIKIRUL = args[1]
 renderchannels = args[2:]
 
 quiet = False
@@ -375,12 +386,12 @@ wikipass = None
 wikimemberspage = None
 
 for o, v in opts:
-    if o == '--help' or o == '-h':
+    if o in ['--help', '-h']:
         usage(0)
-    elif o == '--quiet' or o == '-q':
+    elif o in ['--quiet', '-q']:
         quiet = True
-    elif o == '--verbose' or o == '-v':
-        verbose = True
+    elif o in ['--verbose', '-v']:
+        VERBOSE = True
     elif o == '--users-file':
         usersfile = v
     elif o == '--channels-file':
@@ -398,46 +409,47 @@ for o, v in opts:
     else:
         usage(1)
 
-if usersfile != None:
+if usersfile:
     userjson = readJson(usersfile)
-    for u in userjson:
-        users[userjson[u]['id']] = userjson[u]
+    for slackuser in userjson:
+        users[userjson[slackuser]['id']] = userjson[slackuser]
 
-if channelsfile != None:
+if channelsfile:
     channels = readJson(channelsfile)
-if groupsfile != None:
+if groupsfile:
     groups = readJson(groupsfile)
     for g in list(groups.keys()):
         channels[g] = groups[g]
 
 if wikimemberspage:
-    wikiuserpage = getWikipage(wikiurl, wikimemberspage, wikiuser, wikipass)
-    itemfmt = re.compile('\s+\*\s+(\S+)')
+    wikiuserpage = getWikipage(WIKIRUL, wikimemberspage, wikiuser, wikipass)
+    itemfmt = re.compile(r'\s+\*\s+(\S+)')
     for line in wikiuserpage.split("\n"):
         match = itemfmt.match(line)
-        if match != None:
-            user = match.group(1)
-            lcuser = user.lower()
-            wikiusers[lcuser] = user
+        if match:
+            member = match.group(1)
+            lcuser = member.lower()
+            wikiusers[lcuser] = member
 
-if filesfile != None:
+if filesfile:
     print("Files not supported yet")
     sys.exit(1)
+    # pylint: disable=unreachable
     files = readJson(filesfile)
-    for f in files:
-        print(fileToWiki(f))
+    for slackfile in files:
+        print(fileToWiki(slackfile))
 
 for c in renderchannels:
-    channel = readJson(c)
+    CHANNEL = readJson(c)
 
-    if channel != None:
-        header, messages = channelToWiki(channel)
-        dateids = list(messages.keys())
+    if CHANNEL:
+        HEADER, MESSAGES = channelToWiki(CHANNEL)
+        dateids = list(MESSAGES.keys())
         dateids.sort()
         for did in dateids:
-            page = header
-            for m in messages[did]:
-                page += m
-            writeWikipage(page, wikiurl, "Slack/"+channel['name']+"/"+did, wikiuser, wikipass)
+            page = HEADER
+            for message in MESSAGES[did]:
+                page += message
+            writeWikipage(page, WIKIRUL, "Slack/"+CHANNEL['name']+"/"+did, wikiuser, wikipass)
     else:
         print("Channel not found")
